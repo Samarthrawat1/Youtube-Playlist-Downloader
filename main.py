@@ -1,4 +1,6 @@
 from pytubefix import YouTube, Playlist
+import os
+import ffmpeg
 
 class VideoManager:
     def __init__(self, video_url):
@@ -64,12 +66,41 @@ class PlaylistManager:
         }
         return info
 
+
+class Merger:
+    @staticmethod
+    def merge_audio_video(video_path, audio_path, output_path):
+        video = ffmpeg.input(video_path)
+        audio = ffmpeg.input(audio_path)
+        ffmpeg.output(video, audio, output_path).run()
+        print(f"Merged video and audio to: {output_path}")
+
+class PlaylistDownloader:
+    def __init__(self, playlist_url, path='.', video_resolution='highest', audio_bitrate='highest', merge=True):
+        self.playlist = Playlist(playlist_url)
+        self.path = path
+        self.video_resolution = video_resolution
+        self.audio_bitrate = audio_bitrate
+        self.merge = merge
+    
+    def download_playlist(self):
+        for video_url in self.playlist.video_urls:
+            video_manager = VideoManager(video_url)
+            audio_manager = AudioManager(video_url)
+
+            video_path = video_manager.download_video(path=self.path, resolution=self.video_resolution)
+            audio_path = audio_manager.download_audio(path=self.path, abr=self.audio_bitrate)
+
+            if self.merge:
+                base_name = os.path.splitext(os.path.basename(video_path))[0]
+                output_path = os.path.join(self.path, f"{base_name}_merged.mp4")
+                Merger.merge_audio_video(video_path, audio_path, output_path)
+
 # Example usage
-playlist_url = 'YOUR_PLAYLIST_URL'
-playlist_manager = PlaylistManager(playlist_url)
 
-# Download all videos in the playlist
-playlist_manager.download_all_videos(path='path_to_download_folder')
+if __name__ == "__main__":  
+    playlist_url = 'YOUR_PLAYLIST_URL'
+    path_to_download = 'path_to_download_folder'
 
-# Get playlist info
-print(playlist_manager.get_playlist_info())
+    downloader = PlaylistDownloader(playlist_url, path=path_to_download, video_resolution='720p', audio_bitrate='128kbps', merge=True)
+    downloader.download_playlist()
