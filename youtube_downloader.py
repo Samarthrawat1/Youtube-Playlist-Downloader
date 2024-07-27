@@ -4,7 +4,10 @@ from pytubefix import YouTube, Playlist
 
 class VideoManager:
     def __init__(self, video_url):
-        self.video = YouTube(video_url)
+        try:
+            self.video = YouTube(video_url)
+        except Exception as e:
+            print(f"Failed to initialize YouTube object for {video_url}: {e}")
     
     def list_resolutions(self):
         return [stream.resolution for stream in self.video.streams.filter(type='video')]
@@ -29,7 +32,10 @@ class VideoManager:
 
 class AudioManager:
     def __init__(self, video_url):
-        self.video = YouTube(video_url)
+        try:
+            self.video = YouTube(video_url)
+        except Exception as e:
+            print(f"Failed to initialize YouTube object for {video_url}: {e}")
     
     def list_audio_formats(self):
         return [stream.abr for stream in self.video.streams.filter(only_audio=True)]
@@ -55,10 +61,13 @@ class AudioManager:
 class Merger:
     @staticmethod
     def merge_audio_video(video_path, audio_path, output_path):
-        video = ffmpeg.input(video_path)
-        audio = ffmpeg.input(audio_path)
-        ffmpeg.output(video, audio, output_path).run()
-        print(f"Merged video and audio to: {output_path}")
+        if os.path.exists(video_path) and os.path.exists(audio_path):
+            video = ffmpeg.input(video_path)
+            audio = ffmpeg.input(audio_path)
+            ffmpeg.output(video, audio, output_path).run()
+            print(f"Merged video and audio to: {output_path}")
+        else:
+            print(f"Cannot merge files. Video or audio file does not exist: {video_path}, {audio_path}")
 
 class PlaylistDownloader:
     def __init__(self, playlist_url, path='.', merge=True):
@@ -93,10 +102,3 @@ class PlaylistDownloader:
                 base_name = os.path.splitext(os.path.basename(video_path))[0]
                 output_path = os.path.join(self.path, f"{base_name}_merged.mp4")
                 Merger.merge_audio_video(video_path, audio_path, output_path)
-
-# Example usage
-playlist_url = 'https://www.youtube.com/playlist?list=PLjFumI6IJPcsmnG83zCAWw26APec66MPB'
-path_to_download = 'videos'
-
-downloader = PlaylistDownloader(playlist_url, path=path_to_download, merge=True)
-downloader.download_playlist()
