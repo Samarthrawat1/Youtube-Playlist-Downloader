@@ -1,6 +1,6 @@
-from pytubefix import YouTube, Playlist
 import os
 import ffmpeg
+from pytubefix import YouTube, Playlist
 
 class VideoManager:
     def __init__(self, video_url):
@@ -14,8 +14,9 @@ class VideoManager:
             stream = self.video.streams.get_highest_resolution()
         else:
             stream = self.video.streams.filter(resolution=resolution, type='video').first()
-        stream.download(output_path=path)
-        print(f"Downloaded: {self.video.title}")
+        video_path = stream.download(output_path=path)
+        print(f"Downloaded video: {self.video.title}")
+        return video_path
 
     def get_video_info(self):
         info = {
@@ -25,7 +26,7 @@ class VideoManager:
             'author': self.video.author
         }
         return info
-    
+
 class AudioManager:
     def __init__(self, video_url):
         self.video = YouTube(video_url)
@@ -38,8 +39,9 @@ class AudioManager:
             stream = self.video.streams.filter(only_audio=True).order_by('abr').desc().first()
         else:
             stream = self.video.streams.filter(abr=abr, only_audio=True).first()
-        stream.download(output_path=path)
-        print(f"Downloaded: {self.video.title}")
+        audio_path = stream.download(output_path=path)
+        print(f"Downloaded audio: {self.video.title}")
+        return audio_path
 
     def get_audio_info(self):
         info = {
@@ -50,23 +52,6 @@ class AudioManager:
         }
         return info
 
-class PlaylistManager:
-    def __init__(self, playlist_url):
-        self.playlist = Playlist(playlist_url)
-        self.videos = [VideoManager(video_url) for video_url in self.playlist.video_urls]
-    
-    def download_all_videos(self, path='.'):
-        for video in self.videos:
-            video.download_video(path)
-
-    def get_playlist_info(self):
-        info = {
-            'title': self.playlist.title,
-            'length': len(self.playlist.video_urls)
-        }
-        return info
-
-
 class Merger:
     @staticmethod
     def merge_audio_video(video_path, audio_path, output_path):
@@ -76,20 +61,33 @@ class Merger:
         print(f"Merged video and audio to: {output_path}")
 
 class PlaylistDownloader:
-    def __init__(self, playlist_url, path='.', video_resolution='highest', audio_bitrate='highest', merge=True):
+    def __init__(self, playlist_url, path='.', merge=True):
         self.playlist = Playlist(playlist_url)
         self.path = path
-        self.video_resolution = video_resolution
-        self.audio_bitrate = audio_bitrate
         self.merge = merge
     
+    def get_user_choice(self, options, option_type):
+        print(f"Available {option_type}:")
+        for i, option in enumerate(options):
+            print(f"{i + 1}. {option}")
+        choice = int(input(f"Select {option_type} by number: ")) - 1
+        return options[choice]
+
     def download_playlist(self):
         for video_url in self.playlist.video_urls:
             video_manager = VideoManager(video_url)
             audio_manager = AudioManager(video_url)
 
-            video_path = video_manager.download_video(path=self.path, resolution=self.video_resolution)
-            audio_path = audio_manager.download_audio(path=self.path, abr=self.audio_bitrate)
+            # List and get user choice for video resolution
+            resolutions = video_manager.list_resolutions()
+            selected_resolution = self.get_user_choice(resolutions, 'resolution')
+
+            # List and get user choice for audio bitrate
+            bitrates = audio_manager.list_audio_formats()
+            selected_bitrate = self.get_user_choice(bitrates, 'bitrate')
+
+            video_path = video_manager.download_video(path=self.path, resolution=selected_resolution)
+            audio_path = audio_manager.download_audio(path=self.path, abr=selected_bitrate)
 
             if self.merge:
                 base_name = os.path.splitext(os.path.basename(video_path))[0]
@@ -97,10 +95,8 @@ class PlaylistDownloader:
                 Merger.merge_audio_video(video_path, audio_path, output_path)
 
 # Example usage
+playlist_url = 'https://www.youtube.com/playlist?list=PLjFumI6IJPcsmnG83zCAWw26APec66MPB'
+path_to_download = 'videos'
 
-if __name__ == "__main__":  
-    playlist_url = 'YOUR_PLAYLIST_URL'
-    path_to_download = 'path_to_download_folder'
-
-    downloader = PlaylistDownloader(playlist_url, path=path_to_download, video_resolution='720p', audio_bitrate='128kbps', merge=True)
-    downloader.download_playlist()
+downloader = PlaylistDownloader(playlist_url, path=path_to_download, merge=True)
+downloader.download_playlist()
