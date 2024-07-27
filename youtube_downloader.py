@@ -82,19 +82,22 @@ class PlaylistDownloader:
         choice = int(input(f"Select {option_type} by number: ")) - 1
         return options[choice]
 
-    def download_playlist(self):
+    def download_playlist(self, max_resolution=False):
         for video_url in self.playlist.video_urls:
             video_manager = VideoManager(video_url)
             audio_manager = AudioManager(video_url)
-
+            if max_resolution:
+                selected_resolution = 'highest'
+                selected_bitrate = 'highest'
+            if not max_resolution:
             # List and get user choice for video resolution
-            resolutions = video_manager.list_resolutions()
-            selected_resolution = self.get_user_choice(resolutions, 'resolution')
+                resolutions = video_manager.list_resolutions()
+                selected_resolution = self.get_user_choice(resolutions, 'resolution')
 
-            # List and get user choice for audio bitrate
-            bitrates = audio_manager.list_audio_formats()
-            selected_bitrate = self.get_user_choice(bitrates, 'bitrate')
-
+                # List and get user choice for audio bitrate
+                bitrates = audio_manager.list_audio_formats()
+                selected_bitrate = self.get_user_choice(bitrates, 'bitrate')
+            
             video_path = video_manager.download_video(path=self.path, resolution=selected_resolution)
             audio_path = audio_manager.download_audio(path=self.path, abr=selected_bitrate)
 

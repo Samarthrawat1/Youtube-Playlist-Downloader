@@ -26,7 +26,12 @@ class App:
         # Merge Option
         self.merge_var = tk.BooleanVar(value=True)
         self.merge_check = ttk.Checkbutton(root, text="Merge Video and Audio", variable=self.merge_var)
-        self.merge_check.grid(column=1, row=2, padx=10, pady=10)
+        self.merge_check.grid(column=0, row=2, padx=10, pady=10)
+
+        # Download Highest quality
+        self.highest_quality_var = tk.BooleanVar(value=True)
+        self.highest_quality_check = ttk.Checkbutton(root, text="Dwnload highest quality", variable=self.highest_quality_var)
+        self.highest_quality_check.grid(column=2, row=2, padx=10, pady=10)
 
         # Download Button
         self.download_button = ttk.Button(root, text="Download Playlist", command=self.download_playlist)
@@ -42,6 +47,7 @@ class App:
         playlist_url = self.url_entry.get()
         download_path = self.path_entry.get()
         merge = self.merge_var.get()
+        highest_quality = self.highest_quality_var.get()
 
         if not playlist_url or not download_path:
             messagebox.showerror("Error", "Please provide both playlist URL and download path.")
@@ -49,7 +55,7 @@ class App:
 
         try:
             downloader = PlaylistDownloader(playlist_url, path=download_path, merge=merge)
-            downloader.download_playlist()
+            downloader.download_playlist(max_resolution = highest_quality)
             messagebox.showinfo("Success", "Playlist downloaded successfully!")
         except Exception as e:
             messagebox.showerror("Error", f"Failed to download playlist: {e}")
